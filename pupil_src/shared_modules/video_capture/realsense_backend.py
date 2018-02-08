@@ -16,12 +16,12 @@ import os
 
 import pyrealsense as pyrs
 from pyrealsense.stream import ColorStream, DepthStream, DACStream, PointStream
-from pyrealsense.constants import rs_stream, rs_option, rs_preset
+from pyrealsense.constants import rs_stream, rs_option
 from pyrealsense.extlib import rsutilwrapper
 
 from version_utils import VersionFormat
 from .base_backend import Base_Source, Base_Manager
-from av_writer import AV_Writer
+from av_writer import JPEG_Writer, AV_Writer, LosslessPNG_Writer
 from camera_models import load_intrinsics
 
 import glfw
@@ -271,9 +271,9 @@ class Realsense_Source(Base_Source):
 
         colorstream = ColorStream(width=color_frame_size[0],
                                   height=color_frame_size[1],
-                                  fps=color_fps, color_format='yuv', preset=self.stream_preset)
+                                  fps=color_fps, color_format='yuv')
         depthstream = DepthStream(width=depth_frame_size[0],
-                                  height=depth_frame_size[1], fps=depth_fps, preset=self.stream_preset)
+                                  height=depth_frame_size[1], fps=depth_fps)
         pointstream = PointStream(width=depth_frame_size[0],
                                   height=depth_frame_size[1], fps=depth_fps)
 
@@ -455,9 +455,9 @@ class Realsense_Source(Base_Source):
                 glfw.glfwMakeContextCurrent(active_window)
 
 
-        native_presets = [('None', None), ('Best Quality', rs_preset.RS_PRESET_BEST_QUALITY),
-                          ('Largest image', rs_preset.RS_PRESET_LARGEST_IMAGE),
-                          ('Highest framerate', rs_preset.RS_PRESET_HIGHEST_FRAMERATE)]
+        native_presets = [('None', None), ('Best Quality', 0),
+                          ('Largest image', 1),
+                          ('Highest framerate', 2)]
 
         def set_stream_preset(val):
             if self.stream_preset != val:
@@ -664,8 +664,9 @@ class Realsense_Source(Base_Source):
             logger.warning('Depth video recording has been started already')
             return
 
-        video_path = os.path.join(rec_loc, 'depth.mp4')
-        self.depth_video_writer = AV_Writer(video_path, fps=self.depth_frame_rate, use_timestamps=True)
+        video_path = os.path.join(rec_loc, 'depth')
+        #self.depth_video_writer = AV_Writer(video_path, fps=self.depth_frame_rate, use_timestamps=True)
+        self.depth_video_writer = LosslessPNG_Writer(video_path)
 
     def stop_depth_recording(self):
         if self.depth_video_writer is None:

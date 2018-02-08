@@ -27,6 +27,7 @@ from fractions import Fraction
 import logging
 logger = logging.getLogger(__name__)
 
+import png
 
 from threading import Thread
 from threading import Event
@@ -79,7 +80,7 @@ class AV_Writer(object):
     We are creating a
     """
 
-    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 15000*10e3}, audio_loc=None, use_timestamps=False):
+    def __init__(self, file_loc,fps=30, video_stream={'codec':'mpeg4','bit_rate': 60000*10e3}, audio_loc=None, use_timestamps=False):
         super().__init__()
         self.use_timestamps = use_timestamps
         self.timestamps = []
@@ -244,6 +245,37 @@ class JPEG_Writer(object):
         except(RuntimeError):
             logger.error("Media file does not contain any frames.")
         logger.debug("Closed media container")
+        write_timestamps(self.file_loc, self.timestamps)
+
+    def release(self):
+        self.close()
+
+
+
+class LosslessPNG_Writer(object):
+    """
+    Writer for uncompressed PNGs
+    """
+
+    def __init__(self, file_loc, fps=30):
+        super().__init__()
+        # the approximate capture rate.
+        self.timestamps = []
+
+        self.file_loc = file_loc
+        self.configured = False
+        self.frame_count = 0
+        self.write_video_frame_compressed = self.write_video_frame
+        os.mkdir(file_loc)
+
+    def write_video_frame(self, input_frame):
+        with open(self.file_loc + '/' + str(input_frame.timestamp) + '.png', 'wb') as f:
+            writer = png.Writer(width=input_frame.width, height=input_frame.height, bitdepth=16, greyscale=True)
+            writer.write(f, input_frame.depth)
+        self.frame_count += 1
+        self.timestamps.append(input_frame.timestamp)
+
+    def close(self):
         write_timestamps(self.file_loc, self.timestamps)
 
     def release(self):
